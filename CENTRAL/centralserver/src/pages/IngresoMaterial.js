@@ -46,7 +46,7 @@ function Ingresomaterial() {
         // Recorrer la matriz original y colocar los datos en la nueva matriz
         for (let i = 0; i < matriz[0].length; i++) {
           const nombre = matriz[0][i];
-          const bahia = matriz[1][i] - 1; // Ajustar bahía para índice 0
+          const bahia = matriz[1][i]; // Ajustar bahía para índice 0
 
           // Calcular la posición en la nueva matriz
           const fila = Math.floor(bahia / 10);
@@ -68,7 +68,7 @@ function Ingresomaterial() {
       console.log("Matriz ordenada:", matrizOrdenada);
 
       try {
-        const saveResponse = await fetch("http://localhost:5000/saveM1", {
+        const saveResponse = await fetch("http://10.20.5.134:5000/saveM1", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
