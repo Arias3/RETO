@@ -54,7 +54,6 @@ app.get("/api/check-time-difference", (req, res) => {
   }
 });
 
-
 app.post("/register", (req, res) => {
   const { nombre, codigoEstudiantil, nrc } = req.body;
 
@@ -117,7 +116,6 @@ app.post("/verificarUsuario", (req, res) => {
   );
 });
 
-
 app.post("/contenido", (req, res) => {
   const { nuevoPedido } = req.body;
 
@@ -149,7 +147,7 @@ app.post("/contenido", (req, res) => {
     res.status(201).send("Registro insertado correctamente");
   });
 });
-  
+
 app.get("/inventario_rack", (req, res) => {
   const query = `
       SELECT Nombre, COUNT(*) as Cantidad
@@ -713,8 +711,16 @@ app.get("/ultimoPedido", (req, res) => {
 app.post("/actualizarINV", (req, res) => {
   const { EP } = req.body;
 
-  // Obtener la hora actual en formato TIMESTAMP
-  const currentDateTime = new Date().getTime();
+  // Función para formatear la fecha y hora
+  function formatDateTime(dateTimeString) {
+    const dateObj = new Date(dateTimeString);
+    const formattedDate = dateObj.toLocaleString(); // Convierte el objeto Date a una cadena en formato legible
+    return formattedDate;
+  }
+
+  // Obtener la hora actual y formatearla
+  const currentDateTime = new Date().toISOString();
+  const formattedDate = formatDateTime(currentDateTime);
 
   // Variable para almacenar el número de kit encontrado
   let kitNumber = null;
@@ -732,7 +738,7 @@ app.post("/actualizarINV", (req, res) => {
 
     if (results.length === 0) {
       console.log(
-        `No se pudo encontrar el número del Kit en el nombre para EP: ${EP}`
+        `No se pudo encontrar el número del Kit en el nombre para EP: ${EP} en la fecha y hora: ${formattedDate}`
       );
       res.status(500).send("Error interno del servidor");
       return;
@@ -746,7 +752,9 @@ app.post("/actualizarINV", (req, res) => {
 
     if (match) {
       kitNumber = match[1]; // Aquí asignamos el número de kit encontrado
-      console.log(`Número del Kit del EP: ${kitNumber}`);
+      console.log(
+        `Número del Kit del EP: ${kitNumber} en la fecha y hora: ${formattedDate}`
+      );
     } else {
       console.log(
         `No se pudo encontrar el número del Kit en el nombre: ${nombre}`
@@ -762,18 +770,18 @@ app.post("/actualizarINV", (req, res) => {
     // Actualizar INV y Hora_salida_bodega en la tabla Datos
     db.query(
       "UPDATE Datos SET INV = 'NO', Hora_salida_bodega = ? WHERE Tag = ?",
-      [currentDateTime, EP],
-      (updateErr, updateResults) => {
-        if (updateErr) {
-          console.error(
-            "Error al actualizar INV y Hora_salida_bodega:",
-            updateErr
-          );
-          res.status(500).send("Error interno del servidor");
-          return;
+        [formattedDate, EP],
+        (updateErr, updateResults) => {
+          if (updateErr) {
+            console.error(
+              "Error al actualizar INV y Hora_salida_bodega:",
+              updateErr
+            );
+            res.status(500).send("Error interno del servidor");
+            return;
         }
         console.log(
-          `INV y Hora_salida_bodega actualizados para EP: ${EP}, ${currentDateTime}`
+          `INV y Hora_salida_bodega actualizados para EP: ${EP}, ${formattedDate}`
         );
       }
     );

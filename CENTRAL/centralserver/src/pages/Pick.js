@@ -6,11 +6,11 @@ import "./Pick.css";
 function Pick() {
   const [rfidText, setRfidText] = useState("");
   const [epValue, setEpValue] = useState("");
-  const [pedidoRealizado, setPedidoRealizado] = useState([]);
+  const [setPedidoRealizado] = useState([]);
   const [piezasPorVerificar, setPiezasPorVerificar] = useState([]);
   const [piezasVerificadas, setPiezasVerificadas] = useState([]);
   const [popupVisible, setPopupVisible] = useState(false);
-  const [postCount, setPostCount] = useState(0);
+  const [setPostCount] = useState(0);
   const [initialPedidoRealizado, setInitialPedidoRealizado] = useState([]);
 
   const textAreaRef = useRef(null);
