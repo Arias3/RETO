@@ -177,8 +177,8 @@ app.get("/michi", (req, res) => {
               DATE_FORMAT(Hora_entrada_lab, "%Y-%m-%d %H:%i:%s") AS Hora_entrada_lab,
               DATE_FORMAT(Hora_salida_lab, "%Y-%m-%d %H:%i:%s") AS Hora_salida_lab,
               INV,
-              DATE_FORMAT(Hora_entrada_bodega, "%Y-%m-%d %H:%i:%s") AS Hora_entrada_bodega,
-              DATE_FORMAT(Hora_salida_bodega, "%Y-%m-%d %H:%i:%s") AS Hora_salida_bodega 
+              Hora_entrada_bodega,
+              Hora_salida_bodega 
             FROM RETORFID.Datos`,
     (err, results) => {
       if (err) {
@@ -770,15 +770,15 @@ app.post("/actualizarINV", (req, res) => {
     // Actualizar INV y Hora_salida_bodega en la tabla Datos
     db.query(
       "UPDATE Datos SET INV = 'NO', Hora_salida_bodega = ? WHERE Tag = ?",
-        [formattedDate, EP],
-        (updateErr, updateResults) => {
-          if (updateErr) {
-            console.error(
-              "Error al actualizar INV y Hora_salida_bodega:",
-              updateErr
-            );
-            res.status(500).send("Error interno del servidor");
-            return;
+      [currentDateTime, EP],
+      (updateErr, updateResults) => {
+        if (updateErr) {
+          console.error(
+            "Error al actualizar INV y Hora_salida_bodega:",
+            updateErr
+          );
+          res.status(500).send("Error interno del servidor");
+          return;
         }
         console.log(
           `INV y Hora_salida_bodega actualizados para EP: ${EP}, ${formattedDate}`
@@ -852,6 +852,7 @@ app.post("/actualizarINV", (req, res) => {
     );
   });
 });
+
 // Endpoint para crear la tabla 'Modo'
 app.post("/tablemode", (req, res) => {
   const createTableModoQuery = `
@@ -1146,6 +1147,108 @@ app.post("/cancelarPedido", (req, res) => {
       res.status(200).json({ message: "Pedido cancelado exitosamente" });
     }
   );
+});
+
+app.post("/ingresoabodega", (req, res) => {
+  const { EP } = req.body;
+
+  // Función para formatear la fecha y hora
+  function formatDateTime(dateTimeString) {
+    const dateObj = new Date(dateTimeString);
+    const formattedDate = dateObj.toLocaleString(); // Convierte el objeto Date a una cadena en formato legible
+    return formattedDate;
+  }
+
+  // Obtener la hora actual y formatearla
+  const currentDateTime = new Date().toISOString();
+  const formattedDate = formatDateTime(currentDateTime);
+
+  // Variable para almacenar el número de kit encontrado
+  let kitNumber = null;
+
+  // Verificar si el EP está en la tabla Datos
+  db.query("SELECT Nombre FROM Datos WHERE Tag = ?", [EP], (err, results) => {
+    if (err) {
+      console.error("Error al verificar el EP:", err);
+      res.status(500).send("Error interno del servidor");
+      return;
+    }
+
+    if (results.length === 0) {
+      console.log(
+        `No se pudo encontrar el número del Kit en el nombre para EP: ${EP}`
+      );
+      res.status(500).send("Error interno del servidor");
+      return;
+    }
+
+    const nombre = results[0].Nombre; //Kit 2
+
+    // Extraer el número del Kit desde el nombre
+    const regex = /Kit (\d+)/;
+    const match = nombre.match(regex);
+
+    if (match) {
+      kitNumber = match[1]; // Aquí asignamos el número de kit encontrado
+      console.log(`Número del Kit del EP: ${kitNumber}`);
+
+      // Insertar el kitNumber en la tabla dropeo
+      insertarEnDropeo(kitNumber);
+    } else {
+      console.log(
+        `No se pudo encontrar el número del Kit en el nombre: ${nombre}`
+      );
+      res
+        .status(500)
+        .send(
+          `Error: No se pudo encontrar el número del Kit en el nombre: ${nombre}`
+        );
+      return;
+    }
+
+    // Actualizar INV y Hora_salida_bodega en la tabla Datos
+    actualizarDatos(formattedDate, EP);
+  });
+
+  // Función para insertar en la tabla dropeo
+  function insertarEnDropeo(kitNumber) {
+    db.query(
+      "INSERT INTO dropeo (dropp) VALUES (?)",
+      [kitNumber],
+      (insertErr, insertResults) => {
+        if (insertErr) {
+          console.error("Error al insertar en la tabla dropeo:", insertErr);
+          // No enviamos una respuesta de error aquí para no interrumpir la respuesta de la solicitud original
+          return;
+        }
+        console.log(
+          `Número del Kit ${kitNumber} insertado en la tabla dropeo.`
+        );
+      }
+    );
+  }
+
+  // Función para actualizar INV y Hora_entrada_bodega en la tabla Datos
+  function actualizarDatos(formattedDate, EP) {
+    db.query(
+      "UPDATE Datos SET INV = 'SI', Hora_entrada_bodega = ? WHERE Tag = ?",
+      [formattedDate, EP],
+      (updateErr, updateResults) => {
+        if (updateErr) {
+          console.error(
+            "Error al actualizar INV y Hora_entrada_bodega:",
+            updateErr
+          );
+          res.status(500).send("Error interno del servidor");
+          return;
+        }
+        console.log(
+          `INV y Hora_entrada_bodega actualizados para EP: ${EP}, ${currentDateTime}`
+        );
+        res.status(200).send("Operación completada correctamente");
+      }
+    );
+  }
 });
 
 const PORT = process.env.PORT || 5000;
